@@ -578,6 +578,20 @@ static int tcmu_rbd_handle_blacklisted_cmd(struct tcmu_device *dev,
 static int tcmu_rbd_handle_timedout_cmd(struct tcmu_device *dev,
 					struct tcmulib_cmd *cmd)
 {
+        
+        // begin yangzhaohui added for test WRITE_SAM
+        uint8_t *cdb = cmd->cdb;
+        uint32_t lba_cnt = tcmu_get_xfer_length(cdb);
+	uint32_t block_size = tcmu_get_dev_block_size(dev);
+	uint64_t start_lba = tcmu_get_lba(cdb);
+        uint64_t off = block_size * tcmu_get_lba(cdb);
+	uint32_t len = block_size * tcmu_get_xfer_length(cdb);
+        tcmu_dev_dbg(dev, "cmd 0x%x process time out\n", cdb[0]);
+        if ((cdb[0] & 0x93) == 0x93){ 
+        	tcmu_dev_dbg(dev, "WRITE_SAME_16 cmd, Start lba: %llu, number of lba:: %hu, last lba: %llu\n", start_lba, lba_cnt, start_lba + lba_cnt - 1);
+                tcmu_dev_dbg(dev, "WRITE_SAME_16 cmd, Start write same off:%llu, len:%llu\n", off, len);
+        }
+        // end   yangzhaohui added for test WRITE_SAM
 	tcmu_dev_err(dev, "Timing out cmd.\n");
 	tcmu_notify_conn_lost(dev);
 
@@ -606,8 +620,21 @@ static void rbd_finish_aio_read(rbd_completion_t completion,
 {
 	struct tcmu_device *dev = aio_cb->dev;
 	struct tcmulib_cmd *tcmulib_cmd = aio_cb->tcmulib_cmd;
-	struct iovec *iovec = tcmulib_cmd->iovec;
-	size_t iov_cnt = tcmulib_cmd->iov_cnt;
+        // begin yangzhaohui modified for EXTENDED_COPY
+        //struct iovec *iovec = tcmulib_cmd->iovec;
+        //size_t iov_cnt = tcmulib_cmd->iov_cnt;
+        struct iovec *iovec;
+        size_t iov_cnt;
+        if ((tcmulib_cmd->cdb[0] & 0x83) == 0x83){ 
+                struct xcopy *xcopy = tcmulib_cmd->cmdstate; 
+                iovec = &xcopy->iovec;
+                iov_cnt = xcopy->iov_cnt;
+        } else {
+                iovec = tcmulib_cmd->iovec; 
+                iov_cnt = tcmulib_cmd->iov_cnt;
+        } 
+        // end  yangzhaohui modified for EXTENDED_COPY
+
 	int64_t ret;
 	int tcmu_r;
 
@@ -913,6 +940,9 @@ static int tcmu_rbd_handle_cmd(struct tcmu_device *dev, struct tcmulib_cmd *cmd)
 #ifdef RBD_WRITE_SAME_SUPPORT
 	case WRITE_SAME:
 	case WRITE_SAME_16:
+		// begin yangzhaohui added for test
+                tcmu_dev_dbg(dev, "WRITE_SAME WRITE_SAME_16.\n");
+		//  end  yangzhaohui added for test
 		ret = tcmur_handle_writesame(dev, cmd, tcmu_rbd_aio_writesame);
 		break;
 #endif

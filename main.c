@@ -759,6 +759,10 @@ static int dev_added(struct tcmu_device *dev)
 	if (ret)
 		goto cleanup_aio_tracking;
 
+        // begin yangzhaohui added for delete disks in gwcli
+        rdev->flags |= TCMUR_DEV_FLAG_IS_OPEN;
+        // end   yangzhaohui added for delete disks in gwcli
+
 	/*
 	 * Set the optimal unmap granularity and the alignment to
 	 * max xfer len
@@ -806,6 +810,9 @@ static void dev_removed(struct tcmu_device *dev)
 	 */
 	cleanup_io_work_queue_threads(dev);
 	tcmulib_cleanup_cmdproc_thread(dev);
+        // begin yangzhaohui added for delete disks in gwcli
+        cmdproc_thread_cleanup(dev);
+        // end   yangzhaohui added for delete disks in gwcli
 
 	cleanup_io_work_queue(dev, false);
 	cleanup_aio_tracking(rdev);

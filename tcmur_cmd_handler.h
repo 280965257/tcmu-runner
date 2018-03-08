@@ -31,6 +31,27 @@ typedef int (*tcmur_writesame_fn_t)(struct tcmu_device *dev, struct tcmulib_cmd 
 			   uint64_t off, uint64_t len, struct iovec *iov, size_t iov_cnt);
 int tcmur_handle_writesame(struct tcmu_device *dev, struct tcmulib_cmd *cmd,
 			   tcmur_writesame_fn_t write_same_fn);
+// begin yangzhaohui added for EXTENDED_COPY
+struct xcopy {
+       struct tcmu_device *origdev;
+       struct tcmu_device *src_dev;
+       uint8_t src_tid_wwn[16];
+       struct tcmu_device *dst_dev;
+       uint8_t dst_tid_wwn[16];
+
+       uint64_t src_lba;
+       uint64_t dst_lba;
+       uint32_t stdi;
+       uint32_t dtdi;
+       uint32_t lba_cnt;
+       uint32_t copy_lbas;
+
+       void *iov_base;
+       size_t iov_len;
+       struct iovec iovec;
+       size_t iov_cnt;
+};
+// end  yangzhaohui added for EXTENDED_COPY
 
 
 #endif /* __TCMUR_CMD_HANDLER_H */

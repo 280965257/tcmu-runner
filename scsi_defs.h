@@ -32,6 +32,9 @@
 #define MAINTENANCE_IN			0xa3
 #define MAINTENANCE_OUT			0xa4
 #define MI_REPORT_TARGET_PGS		0x0a
+// begin yangzhaohui added about MAINTENANCE_IN for EXTENDED_COPY from https://github.com/open-iscsi/tcmu-runner/pull/334
+#define MI_REPORT_SUPPORTED_OPERATION_CODES 0x0c
+//  end  yangzhaohui added about MAINTENANCE_IN for EXTENDED_COPY from https://github.com/open-iscsi/tcmu-runner/pull/334
 #define MO_SET_TARGET_PGS		0x0a
 
 /*

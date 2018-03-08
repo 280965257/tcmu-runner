@@ -120,10 +120,16 @@ int tcmu_get_attribute(struct tcmu_device *dev, const char *name);
 long long tcmu_get_device_size(struct tcmu_device *dev);
 char *tcmu_get_wwn(struct tcmu_device *dev);
 int tcmu_get_cdb_length(uint8_t *cdb);
+// begin yangzhaohui added about MAINTENANCE_IN for EXTENDED_COPY from https://github.com/open-iscsi/tcmu-runner/pull/334
+int tcmu_get_cdb_length_by_opcode(uint8_t opcode);
+//  end  yangzhaohui added about MAINTENANCE_IN for EXTENDED_COPY from https://github.com/open-iscsi/tcmu-runner/pull/334
 uint64_t tcmu_get_lba(uint8_t *cdb);
 uint32_t tcmu_get_xfer_length(uint8_t *cdb);
 off_t tcmu_compare_with_iovec(void *mem, struct iovec *iovec, size_t size);
 void tcmu_seek_in_iovec(struct iovec *iovec, size_t count);
+// begin yangzhaohui added for COMPARE_AND_WRITE
+void tcmu_seek_in_cmd_iovec(struct tcmulib_cmd *cmd, size_t count);
+//  end  yangzhaohui added for COMPARE_AND_WRITE
 void tcmu_zero_iovec(struct iovec *iovec, size_t iov_cnt);
 size_t tcmu_memcpy_into_iovec(struct iovec *iovec, size_t iov_cnt, void *src, size_t len);
 size_t tcmu_memcpy_from_iovec(void *dest, size_t len, struct iovec *iovec, size_t iov_cnt);
@@ -147,7 +153,9 @@ int tcmu_emulate_mode_select(struct tcmu_device *dev, uint8_t *cdb,
 			     uint8_t *sense);
 /* SCSI helpers */
 void tcmu_cdb_debug_info(const struct tcmulib_cmd *cmd);
-
+// begin yangzhaohui added for test
+void tcmu_iovec_debug_info(struct tcmu_device *dev, const struct tcmulib_cmd *cmd);
+// end   yangzhaohui added for test
 #ifdef __cplusplus
 }
 #endif

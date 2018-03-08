@@ -63,6 +63,32 @@ int tcmu_get_cdb_length(uint8_t *cdb)
 	}
 }
 
+// begin yangzhaohui added about MAINTENANCE_IN for EXTENDED_COPY from https://github.com/open-iscsi/tcmu-runner/pull/334
+int tcmu_get_cdb_length_by_opcode(uint8_t opcode)
+{
+	int8_t group_code = opcode >> 5;
+
+	switch (group_code) {
+	case 0: /*000b for 6 bytes commands */
+		return 6;
+	case 1: /*001b for 10 bytes commands */
+	case 2: /*010b for 10 bytes commands */
+		return 10;
+	case 3: /*011b Reserved ? */
+		return -EINVAL;
+	case 4: /*100b for 16 bytes commands */
+		return 16;
+	case 5: /*101b for 12 bytes commands */
+		return 12;
+	case 6: /*110b Vendor Specific */
+	case 7: /*111b Vendor Specific */
+	default:
+		/* TODO: */
+		return -EINVAL;
+	}
+}
+//  end   yangzhaohui added about MAINTENANCE_IN for EXTENDED_COPY from https://github.com/open-iscsi/tcmu-runner/pull/334
+
 uint64_t tcmu_get_lba(uint8_t *cdb)
 {
 	uint16_t val;
@@ -156,10 +182,32 @@ void tcmu_seek_in_iovec(struct iovec *iovec, size_t count)
 	}
 }
 
+// begin yangzhaohui added for COMPARE_AND_WRITE
+/*
+ * Consume an iovec. Count must not exceed the total iovec[] size.
+ * iove count should be updated.
+ */
+void tcmu_seek_in_cmd_iovec(struct tcmulib_cmd *cmd, size_t count)
+{
+	struct iovec *iovec = cmd->iovec;
+	while (count) {
+		if (count >= iovec->iov_len) {
+			count -= iovec->iov_len;
+			iovec->iov_len = 0;
+			iovec++;
+			cmd->iov_cnt--;
+		} else {
+			iovec->iov_base += count;
+			iovec->iov_len -= count;
+			count = 0;
+		}
+	}
+}
+// end   yangzhaohui added for COMPARE_AND_WRITE
+
 size_t tcmu_iovec_length(struct iovec *iovec, size_t iov_cnt)
 {
 	size_t length = 0;
-
 	while (iov_cnt) {
 		length += iovec->iov_len;
 		iovec++;
@@ -235,15 +283,28 @@ size_t tcmu_memcpy_into_iovec(
 	size_t copied = 0;
 
 	while (len && iov_cnt) {
-		size_t to_copy = min(iovec->iov_len, len);
+                // begin yangzhaohui modified for test
+		//size_t to_copy = min(iovec->iov_len, len);
+		void *iov_base = iovec->iov_base;
+                size_t iov_len = iovec->iov_len;
+                size_t to_copy = min(iov_len, len);
 
-		if (to_copy) {
-			memcpy(iovec->iov_base, src + copied, to_copy);
+		//if (to_copy) {
+                while (to_copy) {
+			//memcpy(iovec->iov_base, src + copied, to_copy);
+                        memcpy(iov_base, src + copied, to_copy);
 
 			len -= to_copy;
 			copied += to_copy;
-			iovec->iov_base += to_copy;
-			iovec->iov_len -= to_copy;
+			//iovec->iov_base += to_copy;
+			//iovec->iov_len -= to_copy;
+                        iov_base += to_copy;
+                        iov_len -= to_copy;
+                // end   yangzhaohui modified for test
+                        
+                        // begin yangzhaohui added for test
+                        to_copy = min(iov_len, len);
+			// end   yangzhaohui added for test
 		}
 
 		iovec++;
@@ -265,15 +326,27 @@ size_t tcmu_memcpy_from_iovec(
 	size_t copied = 0;
 
 	while (len && iov_cnt) {
-		size_t to_copy = min(iovec->iov_len, len);
+		// begin yangzhaohui modified for test
+		//size_t to_copy = min(iovec->iov_len, len);
+                void *iov_base = iovec->iov_base;
+                size_t iov_len = iovec->iov_len;
+                size_t to_copy = min(iov_len, len);
 
-		if (to_copy) {
+		//if (to_copy) {
+                while (to_copy) {
 			memcpy(dest + copied, iovec->iov_base, to_copy);
 
 			len -= to_copy;
 			copied += to_copy;
-			iovec->iov_base += to_copy;
-			iovec->iov_len -= to_copy;
+			//iovec->iov_base += to_copy;
+			//iovec->iov_len -= to_copy;
+                        iov_base += to_copy;
+                        iov_len -= to_copy;
+		// end   yangzhaohui modified for test
+
+			// begin yangzhaohui added for test
+                        to_copy = min(iov_len, len);
+			// end   yangzhaohui added for test
 		}
 
 		iovec++;
@@ -1201,3 +1274,38 @@ void tcmu_cdb_debug_info(const struct tcmulib_cmd *cmd)
 	if (bytes > CDB_FIX_SIZE)
 		free(buf);
 }
+
+// begin yangzhaohui added for test
+void tcmu_iovec_debug_info(struct tcmu_device *dev, const struct tcmulib_cmd *cmd)
+{
+	size_t length = tcmu_iovec_length(cmd->iovec, cmd->iov_cnt);
+	uint8_t *bounce_buffer = malloc(length);
+	if (!bounce_buffer) {
+		tcmu_dev_err(dev, "out of memory.\n");
+		return ;
+	}
+
+	tcmu_memcpy_from_iovec(bounce_buffer, length, cmd->iovec, cmd->iov_cnt);
+	char *buf = malloc(length * 3 + 1);
+	if (!buf) {
+		tcmu_dev_err(dev, "out of memory.\n");
+		free(bounce_buffer);
+		return;
+	}
+
+        int i, n;
+	for (i = 0, n = 0; i < length; i++) {
+		n += sprintf(buf + n, "%x ", bounce_buffer[i]);
+	}
+
+	sprintf(buf + n, "\n");
+
+        tcmu_dev_dbg(dev, "length: %u, terminal: %d\n", length, n);
+
+	tcmu_dev_dbg(dev, buf);
+	
+        free(bounce_buffer);
+	free(buf);
+}
+// end   yangzhaohui added for test
+
