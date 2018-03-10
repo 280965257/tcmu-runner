@@ -166,6 +166,14 @@ static const uint8_t *get_cdb_usage_data(uint8_t op, uint8_t sa)
 		.cdb_usage = {EXTENDED_COPY, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, CONTROL_BYTE},
 	};
+
+	static cdb_info opcode_compare_and_write = {
+		.opcode = COMPARE_AND_WRITE,
+		.cdb_length = 16,
+		.cdb_usage = {COMPARE_AND_WRITE, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0x00, 0x00, 0x00, 0xff, 0x00, CONTROL_BYTE},
+	};
+
 	static cdb_info opcode_read_16 = {
 		.opcode = READ_16,
 		.cdb_length = 16,
@@ -256,6 +264,9 @@ static const uint8_t *get_cdb_usage_data(uint8_t op, uint8_t sa)
 	case EXTENDED_COPY:
 		buf = opcode_extended_copy.cdb_usage;
 		break;
+	case COMPARE_AND_WRITE:
+		buf = opcode_compare_and_write.cdb_usage;
+		break;
 	case READ_16:
 		buf = opcode_read_16.cdb_usage;
 		break;
@@ -297,6 +308,7 @@ static int is_supported_opcode(int opcode)
 	case MAINTENANCE_IN:
 	case UNMAP:
 	case EXTENDED_COPY:
+	case COMPARE_AND_WRITE:
 	case READ_16:
 	case WRITE_16:
 	case WRITE_SAME:
