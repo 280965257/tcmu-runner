@@ -126,7 +126,10 @@ int tcmu_get_cdb_length_by_opcode(uint8_t opcode);
 uint64_t tcmu_get_lba(uint8_t *cdb);
 uint32_t tcmu_get_xfer_length(uint8_t *cdb);
 off_t tcmu_compare_with_iovec(void *mem, struct iovec *iovec, size_t size);
-void tcmu_seek_in_iovec(struct iovec *iovec, size_t count);
+// begin yangzhaohui modified for COMPARE_AND_WRITE
+//void tcmu_seek_in_iovec(struct iovec *iovec, size_t count);
+size_t tcmu_seek_in_iovec(struct iovec *iovec, size_t count);
+//  end  yangzhaohui modified for COMPARE_AND_WRITE
 // begin yangzhaohui added for COMPARE_AND_WRITE
 void tcmu_seek_in_cmd_iovec(struct tcmulib_cmd *cmd, size_t count);
 //  end  yangzhaohui added for COMPARE_AND_WRITE

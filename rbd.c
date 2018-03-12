@@ -75,6 +75,10 @@ struct rbd_aio_cb {
 
 	int64_t length;
 	char *bounce_buffer;
+        // begin yangzhaohui added for EXTENDED_COPY
+        struct iovec *iov;
+        size_t iov_cnt;
+        // end    yangzhaohui added for EXTENDED_COPY
 };
 
 #ifdef LIBRADOS_SUPPORTS_SERVICES
@@ -623,16 +627,8 @@ static void rbd_finish_aio_read(rbd_completion_t completion,
         // begin yangzhaohui modified for EXTENDED_COPY
         //struct iovec *iovec = tcmulib_cmd->iovec;
         //size_t iov_cnt = tcmulib_cmd->iov_cnt;
-        struct iovec *iovec;
-        size_t iov_cnt;
-        if ((tcmulib_cmd->cdb[0] & 0x83) == 0x83){ 
-                struct xcopy *xcopy = tcmulib_cmd->cmdstate; 
-                iovec = &xcopy->iovec;
-                iov_cnt = xcopy->iov_cnt;
-        } else {
-                iovec = tcmulib_cmd->iovec; 
-                iov_cnt = tcmulib_cmd->iov_cnt;
-        } 
+        struct iovec *iov = aio_cb->iov;
+        size_t iov_cnt = aio_cb->iov_cnt;
         // end  yangzhaohui modified for EXTENDED_COPY
 
 	int64_t ret;
@@ -651,7 +647,10 @@ static void rbd_finish_aio_read(rbd_completion_t completion,
 					     MEDIUM_ERROR, ASC_READ_ERROR, NULL);
 	} else {
 		tcmu_r = SAM_STAT_GOOD;
-		tcmu_memcpy_into_iovec(iovec, iov_cnt,
+                // begin yangzhaohui modified for EXTENDED_COPY
+		//tcmu_memcpy_into_iovec(iovec, iov_cnt,
+		tcmu_memcpy_into_iovec(iov, iov_cnt,
+		// end  yangzhaohui modified for EXTENDED_COPY
 				       aio_cb->bounce_buffer, aio_cb->length);
 	}
 
@@ -679,6 +678,10 @@ static int tcmu_rbd_read(struct tcmu_device *dev, struct tcmulib_cmd *cmd,
 	aio_cb->dev = dev;
 	aio_cb->length = length;
 	aio_cb->tcmulib_cmd = cmd;
+	// begin yangzhaohui added for EXTENDED_COPY
+	aio_cb->iov = iov;
+	aio_cb->iov_cnt = iov_cnt;
+	// end   yangzhaohui added for EXTENDED_COPY
 
 	aio_cb->bounce_buffer = malloc(length);
 	if (!aio_cb->bounce_buffer) {

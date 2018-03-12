@@ -167,20 +167,42 @@ off_t tcmu_compare_with_iovec(void *mem, struct iovec *iovec, size_t size)
 /*
  * Consume an iovec. Count must not exceed the total iovec[] size.
  */
-void tcmu_seek_in_iovec(struct iovec *iovec, size_t count)
+// begin yangzhaohui modified for COMPARE_AND_WRIT
+//void tcmu_seek_in_iovec(struct iovec *iovec, size_t count)
+//{
+//	while (count) {
+//		if (count >= iovec->iov_len) {
+//			count -= iovec->iov_len;
+//			iovec->iov_len = 0;
+//			iovec++;
+//		} else {
+//			iovec->iov_base += count;
+//			iovec->iov_len -= count;
+//			count = 0;
+//		}
+//	}
+//}
+
+size_t tcmu_seek_in_iovec(struct iovec *iovec, size_t count)
 {
-	while (count) {
-		if (count >= iovec->iov_len) {
-			count -= iovec->iov_len;
-			iovec->iov_len = 0;
-			iovec++;
-		} else {
-			iovec->iov_base += count;
-			iovec->iov_len -= count;
-			count = 0;
-		}
-	}
+	size_t consumed = 0;
+
+        while (count) {
+                if (count >= iovec->iov_len) {
+                        count -= iovec->iov_len;
+                        iovec->iov_len = 0;
+                        iovec++;
+			consumed++;
+                } else {
+                        iovec->iov_base += count;
+                        iovec->iov_len -= count;
+                        count = 0;
+                }
+        }
+
+	return consumed;
 }
+// end   yangzhaohui modified for COMPARE_AND_WRITE
 
 // begin yangzhaohui added for COMPARE_AND_WRITE
 /*
@@ -189,19 +211,7 @@ void tcmu_seek_in_iovec(struct iovec *iovec, size_t count)
  */
 void tcmu_seek_in_cmd_iovec(struct tcmulib_cmd *cmd, size_t count)
 {
-	struct iovec *iovec = cmd->iovec;
-	while (count) {
-		if (count >= iovec->iov_len) {
-			count -= iovec->iov_len;
-			iovec->iov_len = 0;
-			iovec++;
-			cmd->iov_cnt--;
-		} else {
-			iovec->iov_base += count;
-			iovec->iov_len -= count;
-			count = 0;
-		}
-	}
+	cmd->iov_cnt -= tcmu_seek_in_iovec(cmd->iovec, count);	
 }
 // end   yangzhaohui added for COMPARE_AND_WRITE
 
